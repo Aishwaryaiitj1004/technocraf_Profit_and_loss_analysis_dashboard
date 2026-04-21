@@ -4,7 +4,7 @@ import plotly.express as px
 import pandas as pd
 
 st.set_page_config(
-    page_title="Technocraft Fashions – Operational Insights — Profit & Loss Dashboard Apr 2025 – Feb 2026",
+    page_title="Technocraft Fashions — P&L Dashboard",
     page_icon="📊",
     layout="wide",
 )
@@ -43,8 +43,7 @@ DATA = {
     }
 }
 
-st.markdown("## 📊 Technocraft Fashions — P&L Dashboard")
-st.caption("Amravati & Betul Divisions · April 2025 – February 2026")
+st.markdown("## 📊 Technocraft Fashions – Operational Insights — Profit & Loss Dashboard Apr 2025 – Feb 2026")
 
 st.markdown("---")
 
