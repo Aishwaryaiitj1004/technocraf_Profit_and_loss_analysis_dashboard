@@ -222,7 +222,10 @@ def color_pl(val):
     except:
         return ""
 
-styled = df.style.applymap(color_pl, subset=["Net P&L (₹Cr)", "EBITDA Margin", f"{metric} (selected)"])
+try:
+    styled = df.style.map(color_pl, subset=["Net P&L (₹Cr)", "EBITDA Margin", f"{metric} (selected)"])
+except AttributeError:
+    styled = df.style.applymap(color_pl, subset=["Net P&L (₹Cr)", "EBITDA Margin", f"{metric} (selected)"])
 st.dataframe(styled, use_container_width=True, hide_index=True)
 
 st.markdown("---")
