@@ -15,30 +15,38 @@ st.set_page_config(
 excel_file = "pl_data.xlsx"
 
 amravati_df = pd.read_excel(excel_file, sheet_name=0, header=None)
-betul_df = pd.read_excel(excel_file, sheet_name=1, header=None)
 
 # -----------------------------
-# HELPERS
+# MONTHS
 # -----------------------------
 
-def find_value(df, keyword):
-    df = df.astype(str)
+months = [
+"Apr 25","May 25","Jun 25","Jul 25","Aug 25",
+"Sep 25","Oct 25","Nov 25","Dec 25","Jan 26","Feb 26"
+]
 
-    match = df[df.apply(lambda row: row.str.contains(keyword, case=False).any(), axis=1)]
+# -----------------------------
+# HELPER FUNCTIONS
+# -----------------------------
 
-    if not match.empty:
-        value = match.iloc[0,1]
-        return float(value)
+def get_row_values(df, label):
 
-    return None
+    row = df[df.iloc[:,0].astype(str).str.contains(label, case=False, na=False)]
 
+    if row.empty:
+        return []
 
-def to_cr(v):
+    values = row.iloc[0,1:12].tolist()
 
-    if v is None:
-        return None
+    cleaned = []
 
-    return v / 10000000
+    for v in values:
+        try:
+            cleaned.append(float(str(v).replace(",", "")) / 10000000)
+        except:
+            cleaned.append(None)
+
+    return cleaned
 
 
 def format_money(v):
@@ -56,101 +64,122 @@ def format_money(v):
 
 
 # -----------------------------
-# EXTRACT VALUES
+# FETCH DATA
 # -----------------------------
 
-gross_sales_a = to_cr(find_value(amravati_df, "GROSS SALES"))
-throughput_a = to_cr(find_value(amravati_df, "THROUGHPUT"))
-fixed_cost_a = to_cr(find_value(amravati_df, "FIXED"))
-expenses_a = to_cr(find_value(amravati_df, "EXPENSE"))
-
-gross_sales_b = to_cr(find_value(betul_df, "GROSS SALES"))
-
-# -----------------------------
-# DATA
-# -----------------------------
-
-DATA = {
-
-    "Amravati": {
-
-        "Gross Sales": gross_sales_a,
-        "Throughput": throughput_a,
-        "Fixed Costs": fixed_cost_a,
-        "Total Expenses": expenses_a,
-
-    },
-
-    "Betul": {
-
-        "Gross Sales": gross_sales_b,
-
-    }
-}
+gross_sales = get_row_values(amravati_df, "GROSS SALES")
+net_sales = get_row_values(amravati_df, "NET SALES")
+throughput = get_row_values(amravati_df, "THROUGHPUT")
+fixed_expenses = get_row_values(amravati_df, "TOTAL FIXED EXPENSES")
+ebitda = get_row_values(amravati_df, "EBIDTA")
 
 # -----------------------------
-# DASHBOARD
+# DASHBOARD TITLE
 # -----------------------------
 
-st.title("Technocraft Fashions — Profit & Loss Dashboard")
-
-division = st.selectbox("Division", ["Amravati","Betul"])
-
-data = DATA[division]
-
-# -----------------------------
-# KPIs
-# -----------------------------
-
-col1, col2, col3 = st.columns(3)
-
-col1.metric("Gross Sales", format_money(data.get("Gross Sales")))
-col2.metric("Throughput", format_money(data.get("Throughput")))
-col3.metric("Fixed Costs", format_money(data.get("Fixed Costs")))
+st.title("Technocraft Fashions Limited")
+st.subheader("Profit & Loss Dashboard (Apr 2025 – Feb 2026)")
 
 st.markdown("---")
 
 # -----------------------------
-# CHART
+# KPI CARDS
 # -----------------------------
 
-labels = []
-values = []
+col1, col2, col3, col4 = st.columns(4)
 
-for k,v in data.items():
-    if v is not None:
-        labels.append(k)
-        values.append(v)
+col1.metric("Gross Sales (Feb)", format_money(gross_sales[-1]))
+col2.metric("Net Sales (Feb)", format_money(net_sales[-1]))
+col3.metric("Throughput (Feb)", format_money(throughput[-1]))
+col4.metric("Fixed Expenses (Feb)", format_money(fixed_expenses[-1]))
 
-fig = go.Figure()
+st.markdown("---")
 
-fig.add_bar(
-    x=labels,
-    y=values
-)
+# -----------------------------
+# SALES TREND
+# -----------------------------
 
-fig.update_layout(
-    title=f"{division} Financial Overview",
+fig_sales = go.Figure()
+
+fig_sales.add_trace(go.Scatter(
+    x=months,
+    y=gross_sales,
+    mode="lines+markers",
+    name="Gross Sales"
+))
+
+fig_sales.add_trace(go.Scatter(
+    x=months,
+    y=net_sales,
+    mode="lines+markers",
+    name="Net Sales"
+))
+
+fig_sales.update_layout(
+    title="Monthly Sales Trend",
     height=400
 )
 
-st.plotly_chart(fig, use_container_width=True)
+st.plotly_chart(fig_sales, use_container_width=True)
+
+# -----------------------------
+# THROUGHPUT VS FIXED EXPENSES
+# -----------------------------
+
+fig_tp = go.Figure()
+
+fig_tp.add_bar(
+    x=months,
+    y=throughput,
+    name="Throughput"
+)
+
+fig_tp.add_trace(go.Scatter(
+    x=months,
+    y=fixed_expenses,
+    mode="lines+markers",
+    name="Fixed Expenses"
+))
+
+fig_tp.update_layout(
+    title="Throughput vs Fixed Expenses",
+    height=400
+)
+
+st.plotly_chart(fig_tp, use_container_width=True)
+
+# -----------------------------
+# EBITDA TREND
+# -----------------------------
+
+fig_ebitda = go.Figure()
+
+fig_ebitda.add_bar(
+    x=months,
+    y=ebitda,
+    name="EBITDA"
+)
+
+fig_ebitda.update_layout(
+    title="EBITDA Trend",
+    height=400
+)
+
+st.plotly_chart(fig_ebitda, use_container_width=True)
 
 # -----------------------------
 # TABLE
 # -----------------------------
 
-table_data = []
+df_table = pd.DataFrame({
+    "Month": months,
+    "Gross Sales": gross_sales,
+    "Net Sales": net_sales,
+    "Throughput": throughput,
+    "Fixed Expenses": fixed_expenses,
+    "EBITDA": ebitda
+})
 
-for k,v in data.items():
+st.markdown("### Monthly Breakdown")
 
-    table_data.append({
-        "Metric": k,
-        "Value": format_money(v)
-    })
-
-df = pd.DataFrame(table_data)
-
-st.dataframe(df, use_container_width=True)
-
-st.caption("Data Source: pl_data.xlsx")
+st.dataframe(df_table, use_container_width=True)
