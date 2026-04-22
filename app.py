@@ -8,25 +8,19 @@ st.set_page_config(
     layout="wide",
 )
 
-# ----------------------------
+# -----------------------
 # LOAD EXCEL
-# ----------------------------
+# -----------------------
 
 excel_file = "pl_data.xlsx"
 
-amravati_df = pd.read_excel(
-    excel_file,
-    sheet_name="Profit Loss-Amravati-25-26"
-)
+# read first two sheets automatically
+amravati_df = pd.read_excel(excel_file, sheet_name=0)
+betul_df = pd.read_excel(excel_file, sheet_name=1)
 
-betul_df = pd.read_excel(
-    excel_file,
-    sheet_name="Profit Loss-Betul-25-26"
-)
-
-# ----------------------------
+# -----------------------
 # HELPERS
-# ----------------------------
+# -----------------------
 
 def to_cr(series):
     return (series / 10000000).tolist()
@@ -44,16 +38,16 @@ def format_money(v):
     else:
         return f"{sign}₹{v*100:.0f} L"
 
-# ----------------------------
+# -----------------------
 # MONTHS
-# ----------------------------
+# -----------------------
 
 MONTHS = ["Apr '25","May '25","Jun '25","Jul '25","Aug '25",
           "Sep '25","Oct '25","Nov '25","Dec '25","Jan '26","Feb '26"]
 
-# ----------------------------
+# -----------------------
 # DATA FROM EXCEL
-# ----------------------------
+# -----------------------
 
 DATA = {
 
@@ -86,9 +80,9 @@ DATA = {
     }
 }
 
-# ----------------------------
+# -----------------------
 # DASHBOARD
-# ----------------------------
+# -----------------------
 
 st.title("Technocraft Fashions – Profit & Loss Dashboard")
 
@@ -105,9 +99,9 @@ metric = st.selectbox(
 a = DATA["Amravati"]
 b = DATA["Betul"]
 
-# ----------------------------
+# -----------------------
 # KPI
-# ----------------------------
+# -----------------------
 
 rev_a = sum(a["Gross Sales"])
 pl_a = sum(a["Net P&L"])
@@ -135,9 +129,9 @@ c1, c2 = st.columns(2)
 c1.metric("Period Revenue", format_money(total_rev))
 c2.metric("Period Net P&L", format_money(total_pl))
 
-# ----------------------------
+# -----------------------
 # MAIN CHART
-# ----------------------------
+# -----------------------
 
 fig = go.Figure()
 
@@ -163,9 +157,9 @@ fig.update_layout(
 
 st.plotly_chart(fig, use_container_width=True)
 
-# ----------------------------
+# -----------------------
 # REVENUE VS EXPENSE
-# ----------------------------
+# -----------------------
 
 fig2 = go.Figure()
 
@@ -188,9 +182,9 @@ fig2.update_layout(
 
 st.plotly_chart(fig2, use_container_width=True)
 
-# ----------------------------
+# -----------------------
 # THROUGHOUT VS FIXED
-# ----------------------------
+# -----------------------
 
 fig3 = go.Figure()
 
@@ -212,9 +206,9 @@ fig3.update_layout(
 
 st.plotly_chart(fig3, use_container_width=True)
 
-# ----------------------------
+# -----------------------
 # TABLE
-# ----------------------------
+# -----------------------
 
 rows = []
 
