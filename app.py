@@ -1,6 +1,6 @@
 import streamlit as st
-import plotly.graph_objects as go
 import pandas as pd
+import plotly.graph_objects as go
 
 st.set_page_config(
     page_title="Technocraft Fashions — P&L Dashboard",
@@ -8,22 +8,38 @@ st.set_page_config(
     layout="wide",
 )
 
-# -----------------------
+# -----------------------------
 # LOAD EXCEL
-# -----------------------
+# -----------------------------
 
 excel_file = "pl_data.xlsx"
 
-# read first two sheets automatically
-amravati_df = pd.read_excel(excel_file, sheet_name=0)
-betul_df = pd.read_excel(excel_file, sheet_name=1)
+amravati_df = pd.read_excel(excel_file, sheet_name=0, header=None)
+betul_df = pd.read_excel(excel_file, sheet_name=1, header=None)
 
-# -----------------------
+# -----------------------------
 # HELPERS
-# -----------------------
+# -----------------------------
 
-def to_cr(series):
-    return (series / 10000000).tolist()
+def find_value(df, keyword):
+    df = df.astype(str)
+
+    match = df[df.apply(lambda row: row.str.contains(keyword, case=False).any(), axis=1)]
+
+    if not match.empty:
+        value = match.iloc[0,1]
+        return float(value)
+
+    return None
+
+
+def to_cr(v):
+
+    if v is None:
+        return None
+
+    return v / 10000000
+
 
 def format_money(v):
 
@@ -38,189 +54,103 @@ def format_money(v):
     else:
         return f"{sign}₹{v*100:.0f} L"
 
-# -----------------------
-# MONTHS
-# -----------------------
 
-MONTHS = ["Apr '25","May '25","Jun '25","Jul '25","Aug '25",
-          "Sep '25","Oct '25","Nov '25","Dec '25","Jan '26","Feb '26"]
+# -----------------------------
+# EXTRACT VALUES
+# -----------------------------
 
-# -----------------------
-# DATA FROM EXCEL
-# -----------------------
+gross_sales_a = to_cr(find_value(amravati_df, "GROSS SALES"))
+throughput_a = to_cr(find_value(amravati_df, "THROUGHPUT"))
+fixed_cost_a = to_cr(find_value(amravati_df, "FIXED"))
+expenses_a = to_cr(find_value(amravati_df, "EXPENSE"))
+
+gross_sales_b = to_cr(find_value(betul_df, "GROSS SALES"))
+
+# -----------------------------
+# DATA
+# -----------------------------
 
 DATA = {
 
     "Amravati": {
 
-        "Gross Sales": to_cr(amravati_df["Gross Sales"]),
-        "Net Sales": to_cr(amravati_df["Net Sales"]),
-        "Net P&L": to_cr(amravati_df["Net P&L"]),
-        "EBITDA": to_cr(amravati_df["EBITDA"]),
+        "Gross Sales": gross_sales_a,
+        "Throughput": throughput_a,
+        "Fixed Costs": fixed_cost_a,
+        "Total Expenses": expenses_a,
 
-        "EBITDA Margin %": amravati_df["EBITDA Margin %"].tolist(),
-
-        "Throughput": to_cr(amravati_df["Throughput"]),
-        "Fixed Costs": to_cr(amravati_df["Fixed Costs"]),
-        "Total Expenses": to_cr(amravati_df["Total Expenses"]),
     },
 
     "Betul": {
 
-        "Gross Sales": to_cr(betul_df["Gross Sales"]),
-        "Net Sales": to_cr(betul_df["Net Sales"]),
-        "Net P&L": to_cr(betul_df["Net P&L"]),
-        "EBITDA": to_cr(betul_df["EBITDA"]),
+        "Gross Sales": gross_sales_b,
 
-        "EBITDA Margin %": betul_df["EBITDA Margin %"].tolist(),
-
-        "Throughput": [None]*11,
-        "Fixed Costs": [None]*11,
-        "Total Expenses": [None]*11,
     }
 }
 
-# -----------------------
+# -----------------------------
 # DASHBOARD
-# -----------------------
+# -----------------------------
 
-st.title("Technocraft Fashions – Profit & Loss Dashboard")
+st.title("Technocraft Fashions — Profit & Loss Dashboard")
 
-division = st.selectbox(
-    "Division",
-    ["Both","Amravati","Betul"]
-)
+division = st.selectbox("Division", ["Amravati","Betul"])
 
-metric = st.selectbox(
-    "Metric",
-    ["Net P&L","Gross Sales","EBITDA","EBITDA Margin %","Throughput"]
-)
+data = DATA[division]
 
-a = DATA["Amravati"]
-b = DATA["Betul"]
+# -----------------------------
+# KPIs
+# -----------------------------
 
-# -----------------------
-# KPI
-# -----------------------
+col1, col2, col3 = st.columns(3)
 
-rev_a = sum(a["Gross Sales"])
-pl_a = sum(a["Net P&L"])
+col1.metric("Gross Sales", format_money(data.get("Gross Sales")))
+col2.metric("Throughput", format_money(data.get("Throughput")))
+col3.metric("Fixed Costs", format_money(data.get("Fixed Costs")))
 
-rev_b = sum(b["Gross Sales"])
-pl_b = sum(b["Net P&L"])
+st.markdown("---")
 
-if division == "Amravati":
+# -----------------------------
+# CHART
+# -----------------------------
 
-    total_rev = rev_a
-    total_pl = pl_a
+labels = []
+values = []
 
-elif division == "Betul":
-
-    total_rev = rev_b
-    total_pl = pl_b
-
-else:
-
-    total_rev = rev_a + rev_b
-    total_pl = pl_a + pl_b
-
-c1, c2 = st.columns(2)
-
-c1.metric("Period Revenue", format_money(total_rev))
-c2.metric("Period Net P&L", format_money(total_pl))
-
-# -----------------------
-# MAIN CHART
-# -----------------------
+for k,v in data.items():
+    if v is not None:
+        labels.append(k)
+        values.append(v)
 
 fig = go.Figure()
 
-if division in ["Both","Amravati"]:
-
-    fig.add_bar(
-        name="Amravati",
-        x=MONTHS,
-        y=a[metric]
-    )
-
-if division in ["Both","Betul"]:
-
-    fig.add_bar(
-        name="Betul",
-        x=MONTHS,
-        y=b[metric]
-    )
+fig.add_bar(
+    x=labels,
+    y=values
+)
 
 fig.update_layout(
-    height=350
+    title=f"{division} Financial Overview",
+    height=400
 )
 
 st.plotly_chart(fig, use_container_width=True)
 
-# -----------------------
-# REVENUE VS EXPENSE
-# -----------------------
-
-fig2 = go.Figure()
-
-fig2.add_bar(
-    name="Revenue",
-    x=MONTHS,
-    y=a["Gross Sales"]
-)
-
-fig2.add_bar(
-    name="Expenses",
-    x=MONTHS,
-    y=a["Total Expenses"]
-)
-
-fig2.update_layout(
-    title="Revenue vs Expenses (Amravati)",
-    barmode="group"
-)
-
-st.plotly_chart(fig2, use_container_width=True)
-
-# -----------------------
-# THROUGHOUT VS FIXED
-# -----------------------
-
-fig3 = go.Figure()
-
-fig3.add_bar(
-    name="Throughput",
-    x=MONTHS,
-    y=a["Throughput"]
-)
-
-fig3.add_scatter(
-    name="Fixed Expenses",
-    x=MONTHS,
-    y=a["Fixed Costs"]
-)
-
-fig3.update_layout(
-    title="Throughput vs Fixed Expenses"
-)
-
-st.plotly_chart(fig3, use_container_width=True)
-
-# -----------------------
+# -----------------------------
 # TABLE
-# -----------------------
+# -----------------------------
 
-rows = []
+table_data = []
 
-for i, m in enumerate(MONTHS):
+for k,v in data.items():
 
-    rows.append({
-        "Month": m,
-        "Gross Sales": format_money(a["Gross Sales"][i]),
-        "Net P&L": format_money(a["Net P&L"][i]),
-        "EBITDA Margin": f"{a['EBITDA Margin %'][i]:.1f}%"
+    table_data.append({
+        "Metric": k,
+        "Value": format_money(v)
     })
 
-df = pd.DataFrame(rows)
+df = pd.DataFrame(table_data)
 
 st.dataframe(df, use_container_width=True)
+
+st.caption("Data Source: pl_data.xlsx")
