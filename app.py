@@ -12,7 +12,7 @@ st.set_page_config(
 # LOAD EXCEL
 # ----------------------------
 
-excel_file = "Final Copy of Profit Loss_Fashions_Amravati and Betul -Feb2026.xlsx"
+excel_file = "pl_data.xlsx"
 
 amravati_df = pd.read_excel(
     excel_file,
